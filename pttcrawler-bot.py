@@ -45,7 +45,7 @@ def crawl_ptt(board):
         # 檢查請求是否成功
         if response.status_code != 200:
             app.logger.error(f"爬取失敗，狀態碼: {response.status_code}")
-            return ["爬取失敗，請檢查看板名稱，或是稍後再試"]
+            return False, "爬取失敗，請檢查看板名稱，或是稍後再試"
 
         soup = BeautifulSoup(response.text, 'html.parser')
         posts = []  # 存放結果的列表
@@ -78,15 +78,15 @@ def crawl_ptt(board):
 
         if len(posts) == 0:
             app.logger.info(f"無法從 {board} 中抓取任何文章")
-            return ["目前沒有找到任何文章"]
+            return False, "目前沒有找到任何文章"
 
         # 紀錄爬取結果
         app.logger.info(f"抓取到的標題數量: {len(posts)}")
-        return posts[::-1]
+        return True, posts[:-6:-1]
 
-    except requests.exceptions.RequestException as e:
-        app.logger.error(f"爬蟲過程中發生錯誤: {e}")
-        return ["爬蟲過程中發生錯誤，請稍後再試"]
+    except:
+        app.logger.error(f"爬蟲過程中發生錯誤:")
+        return False, "爬蟲過程中發生錯誤，請稍後再試"
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
@@ -98,24 +98,24 @@ def handle_message(event):
             board = user_message.replace("爬蟲", '')
             while ' ' in board:
                 board = board.replace(' ', '_')
-            posts = crawl_ptt(board)  # 執行爬蟲函數
-
-            # 格式化結果
-            reply = ""
-            for post in posts:
-                reply += f"標題: {post['title']}\n連結: {post['link']}\n推文數: {post['push_count']}\n日期: {post['date']}\n\n"
+            crawling_status, posts = crawl_ptt(board)  # 執行爬蟲函數
 
             # 回傳爬取結果給使用者
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text=f"PTT {board} 最新文章標題:\n{reply}")
-            )
+            if crawling_status:
+                # 格式化結果
+                reply = ""
+                for post in posts:
+                    reply += f"{post['title']}\n{post['link']}\n推文數: {post['push_count']}\n日期: {post['date']}\n\n"
+                text = f"PTT {board} 最新文章標題:\n{reply}"
+            else:
+                text = posts
         else:
-            # 回傳原始訊息
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text="若要進行PTT爬蟲，請輸入「爬蟲{看板英文名稱}」，例如：\n爬蟲Soft_Job")
-            )
+            text = "若要進行PTT爬蟲，請輸入「爬蟲{看板英文名稱}」\n範例1：爬蟲Soft_Job\n範例2：爬蟲Stock"
+
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=text)
+        )
     except LineBotApiError as e:
         app.logger.error(f"LineBotApiError: {e}")
 
