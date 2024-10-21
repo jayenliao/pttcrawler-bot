@@ -7,8 +7,8 @@ from bs4 import BeautifulSoup
 import requests
 
 #line token
-channel_access_token = ''
-channel_secret = ''
+channel_access_token = 'i14cG7TnOMjMK1+8AZwUx0DM2LuqEjMvxVXg3kD7dfQfZyjXJrBNIp8snvqeo7prYOrOSPgX/QwGuRJ88Vuc8D/lsgC1P7KgBUl6q6AgHeuSxIvF3PiOy3m+RHQBq72Lnfx/tFohAjk9m9pvZsAVOwdB04t89/1O/w1cDnyilFU='
+channel_secret = '1866f6be9398989f81e54bb94e527bd8'
 line_bot_api = LineBotApi(channel_access_token)
 handler = WebhookHandler(channel_secret)
 
@@ -82,11 +82,26 @@ def crawl_ptt(board):
 
         # 紀錄爬取結果
         app.logger.info(f"抓取到的標題數量: {len(posts)}")
-        return True, posts[:-6:-1]
+        return True, posts
 
     except:
         app.logger.error(f"爬蟲過程中發生錯誤:")
         return False, "爬蟲過程中發生錯誤，請稍後再試"
+
+def crawl_hotboards(k:int=10):
+    url = 'https://www.ptt.cc/bbs/hotboards.html'
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    cookies = {'over18': '1'}  # 設定cookie繞過18歲驗證
+    response = requests.get(url, headers=headers, cookies=cookies)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    my_boards = []
+    for board in soup.select(".board")[:k]:
+        name = board.select_one(".board-name").text
+        nuser = board.select_one(".board-nuser").text
+        class_ = board.select_one(".board-class").text
+        # title = board.select_one(".board-title").text
+        my_boards.append(f"{name:15s} {nuser.rjust(4)} {class_}")# {title}")
+    return my_boards
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
@@ -101,7 +116,7 @@ def handle_message(event):
             crawling_status, posts = crawl_ptt(board)  # 執行爬蟲函數
 
             # 回傳爬取結果給使用者
-            if crawling_status:
+            if crawling_status: # 如果有成功爬取
                 # 格式化結果
                 reply = ""
                 for post in posts:
@@ -109,6 +124,18 @@ def handle_message(event):
                 text = f"PTT {board} 最新文章標題:\n{reply}"
             else:
                 text = posts
+
+        elif "熱門" in user_message:
+            try:
+                k = int(user_message.replace("熱門", ''))
+                text = ""
+            except:
+                k = 10
+                text = "讀取個數輸入有誤，預設讀取最熱門10個看板\n"
+            text += f"目前最熱門的{k}個PTT看板\n---------------------\n"
+            boards = crawl_hotboards(k)
+            text += "\n".join(boards)
+
         else:
             text = "若要進行PTT爬蟲，請輸入「爬蟲{看板英文名稱}」\n範例1：爬蟲Soft_Job\n範例2：爬蟲Stock"
 
