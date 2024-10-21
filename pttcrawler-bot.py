@@ -41,24 +41,48 @@ def crawl_ptt(board):
         headers = {'User-Agent': 'Mozilla/5.0'}
         cookies = {'over18': '1'}  # 設定cookie繞過18歲驗證
         response = requests.get(url, headers=headers, cookies=cookies)
+
         # 檢查請求是否成功
         if response.status_code != 200:
             app.logger.error(f"爬取失敗，狀態碼: {response.status_code}")
             return ["爬取失敗，請檢查看板名稱，或是稍後再試"]
 
-        titles = []
         soup = BeautifulSoup(response.text, 'html.parser')
-        for title in soup.select('.title a'):
-            if title is not None:
-                titles.append(title.text)
+        posts = []  # 存放結果的列表
 
-        if len(titles) == 0:
+        # 選擇包含標題、推文和日期的區塊
+        for post in soup.select('div.r-ent'):
+            title_elem = post.select_one('.title a')  # 文章標題
+            if title_elem:
+                title = title_elem.text  # 取得標題文字
+                link = 'https://www.ptt.cc' + title_elem['href']  # 取得文章連結
+            else:
+                # 如果文章被刪除，可能會找不到連結
+                title = "(本文已被刪除)"
+                link = "(無連結)"
+
+            # 取得推文數量
+            push_count = post.select_one('.nrec').text.strip()  # 推文數量
+            push_count = push_count if push_count else '0'  # 如果推文數量是空字串，設置為 0
+
+            # 取得文章日期
+            date = post.select_one('.meta .date').text.strip()  # 提取日期
+
+            # 將每篇文章的資料儲存到列表中
+            posts.append({
+                'title': title,
+                'link': link,
+                'push_count': push_count,
+                'date': date  # 加入文章日期
+            })
+
+        if len(posts) == 0:
             app.logger.info(f"無法從 {board} 中抓取任何文章")
             return ["目前沒有找到任何文章"]
 
         # 紀錄爬取結果
-        app.logger.info(f"抓取到的標題數量: {len(titles)}")
-        return titles[-10::-1]
+        app.logger.info(f"抓取到的標題數量: {len(posts)}")
+        return posts[::-1]
 
     except requests.exceptions.RequestException as e:
         app.logger.error(f"爬蟲過程中發生錯誤: {e}")
@@ -70,12 +94,16 @@ def handle_message(event):
 
     try:
         # 如果使用者的輸入包含「爬蟲」，觸發爬取 PTT 的文章標題，「爬蟲」二字以外的輸出則視為要爬的ptt版
-        if "爬蟲" in user_message:
+        if user_message[:2] == "爬蟲":
             board = user_message.replace("爬蟲", '')
             while ' ' in board:
                 board = board.replace(' ', '_')
-            ptt_titles = crawl_ptt(board)  # 執行爬蟲函數
-            reply = "\n".join(ptt_titles)  # 格式化回應內容
+            posts = crawl_ptt(board)  # 執行爬蟲函數
+
+            # 格式化結果
+            reply = ""
+            for post in posts:
+                reply += f"標題: {post['title']}\n連結: {post['link']}\n推文數: {post['push_count']}\n日期: {post['date']}\n\n"
 
             # 回傳爬取結果給使用者
             line_bot_api.reply_message(
