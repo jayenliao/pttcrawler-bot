@@ -34,54 +34,62 @@ def callback():
     return 'OK'
 
 # 爬蟲函數: 爬取 PTT 的最新文章標題
-def crawl_ptt():
-    app.logger.info("開始爬取 PTT...")
-    url = 'https://www.ptt.cc/bbs/Gossiping/index.html'
-    headers = {'User-Agent': 'Mozilla/5.0'}
-    cookies = {'over18': '1'}  # 設定cookie繞過18歲驗證
-    response = requests.get(url, headers=headers, cookies=cookies)
-    soup = BeautifulSoup(response.text, 'html.parser')
+def crawl_ptt(board):
+    try:
+        app.logger.info(f"開始爬取 PTT {board}...")
+        url = f'https://www.ptt.cc/bbs/{board}/index.html'
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        cookies = {'over18': '1'}  # 設定cookie繞過18歲驗證
+        response = requests.get(url, headers=headers, cookies=cookies)
+        # 檢查請求是否成功
+        if response.status_code != 200:
+            app.logger.error(f"爬取失敗，狀態碼: {response.status_code}")
+            return ["爬取失敗，請檢查看板名稱，或是稍後再試"]
 
-    # 檢查請求是否成功
-    if response.status_code != 200:
-        app.logger.error(f"爬取失敗，狀態碼: {response.status_code}")
-        return ["爬取失敗，請稍後再試"]
+        titles = []
+        soup = BeautifulSoup(response.text, 'html.parser')
+        for title in soup.select('.title a'):
+            if title is not None:
+                titles.append(title.text)
 
-    titles = []
-    for title in soup.select('.title a'):
-        if title is not None:
-            titles.append(title.text)
+        if len(titles) == 0:
+            app.logger.info(f"無法從 {board} 中抓取任何文章")
+            return ["目前沒有找到任何文章"]
 
-    if len(titles) == 0:
-        return ["目前沒有找到任何文章"]
+        # 紀錄爬取結果
+        app.logger.info(f"抓取到的標題數量: {len(titles)}")
 
-    # 紀錄爬取結果
-    app.logger.info(f"抓取到的標題數量: {len(titles)}")
+        # 回傳前五個標題作為範例
+        app.logger.info("\n".join(titles[:5]))
+        return titles[:5]
 
-    # 回傳前五個標題作為範例
-    app.logger.info("\n".join(titles[:5]))
-    return titles[:5]
+    except requests.exceptions.RequestException as e:
+        app.logger.error(f"爬蟲過程中發生錯誤: {e}")
+        return ["爬蟲過程中發生錯誤，請稍後再試"]
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_message = event.message.text
 
     try:
-        # 如果使用者輸入 "爬蟲"，觸發爬取 PTT 的文章標題
-        if user_message == "爬蟲":
-            ptt_titles = crawl_ptt()  # 執行爬蟲函數
+        # 如果使用者的輸入包含「爬蟲」，觸發爬取 PTT 的文章標題，「爬蟲」二字以外的輸出則視為要爬的ptt版
+        if "爬蟲" in user_message:
+            board = user_message.replace("爬蟲", '')
+            while ' ' in board:
+                board = board.replace(' ', '_')
+            ptt_titles = crawl_ptt(board)  # 執行爬蟲函數
             reply = "\n".join(ptt_titles)  # 格式化回應內容
 
             # 回傳爬取結果給使用者
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(text=f"PTT 最新文章標題:\n{reply}")
+                TextSendMessage(text=f"PTT {board} 最新文章標題:\n{reply}")
             )
         else:
             # 回傳原始訊息
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(text=user_message)
+                TextSendMessage(text="若要進行PTT爬蟲，請輸入「爬蟲{看板英文名稱}」，例如：\n爬蟲Soft_Job")
             )
     except LineBotApiError as e:
         app.logger.error(f"LineBotApiError: {e}")
