@@ -138,6 +138,7 @@ def handle_message(event):
 
         else:
             text = "若要進行PTT爬蟲，請輸入「爬蟲{看板英文名稱}」\n範例1：爬蟲Soft_Job\n範例2：爬蟲Stock"
+            text += "查看目前熱門看板，請輸入「熱門{欲查看熱門看板數量}」\n範例：熱門15"
 
         line_bot_api.reply_message(
             event.reply_token,
