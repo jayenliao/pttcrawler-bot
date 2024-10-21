@@ -58,10 +58,7 @@ def crawl_ptt(board):
 
         # 紀錄爬取結果
         app.logger.info(f"抓取到的標題數量: {len(titles)}")
-
-        # 回傳前五個標題作為範例
-        app.logger.info("\n".join(titles[:5]))
-        return titles[:5]
+        return titles[-10::-1]
 
     except requests.exceptions.RequestException as e:
         app.logger.error(f"爬蟲過程中發生錯誤: {e}")
