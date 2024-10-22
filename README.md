@@ -1,6 +1,6 @@
 # pttcrawler-bot: PTT爬蟲LINE Bot
 
-作者：Jay Liao (jay[at]gmail.com)
+作者：Jay Liao (jay.chiehen[at]gmail.com)
 
 這個專案的目的是讓使用者能夠透過 Line Bot 查詢 PTT 指定看板上最新的文章，並獲取以下資訊：
 
@@ -71,12 +71,3 @@ flyctl deploy
 5. 使用 `fly.io` 或 `ngrok` 或類似服務來部署本地服務，讓 Line Bot 可以連接。
 
 6. 在 Line Developer Console 中設定 Webhook URL，將它指向你的app，例如 `https://pttcrawler-bot.fly.dev/callback`。
-
-<!-- ### Docker 部署
-
-專案內已經提供了 Dockerfile，可根據需求進行 Docker 部署：
-
-docker build -t pttcrawler-bot .
-docker run -d -p 5000:5000 pttcrawler-bot -->
-
-
