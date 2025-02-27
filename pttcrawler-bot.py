@@ -7,8 +7,8 @@ from bs4 import BeautifulSoup
 import requests
 
 #line token
-channel_access_token = 'i14cG7TnOMjMK1+8AZwUx0DM2LuqEjMvxVXg3kD7dfQfZyjXJrBNIp8snvqeo7prYOrOSPgX/QwGuRJ88Vuc8D/lsgC1P7KgBUl6q6AgHeuSxIvF3PiOy3m+RHQBq72Lnfx/tFohAjk9m9pvZsAVOwdB04t89/1O/w1cDnyilFU='
-channel_secret = '1866f6be9398989f81e54bb94e527bd8'
+channel_access_token = ''
+channel_secret = ''
 line_bot_api = LineBotApi(channel_access_token)
 handler = WebhookHandler(channel_secret)
 
