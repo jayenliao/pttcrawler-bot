@@ -7,8 +7,8 @@ from bs4 import BeautifulSoup
 import requests
 
 #line token
-channel_access_token = ''
-channel_secret = ''
+channel_access_token = 'Put your token here' # author's token has been changed
+channel_secret = 'Put your secret here' # author's secret has been changed
 line_bot_api = LineBotApi(channel_access_token)
 handler = WebhookHandler(channel_secret)
 
